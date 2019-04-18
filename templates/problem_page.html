@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Problem {title}</title>
+
+    <link rel="stylesheet" href="/mathquill.css"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="/mathquill.js"></script>
+    <script>
+    var MQ = MathQuill.getInterface(2);
+    </script>
+
+
+</head>
+<body>
+
+    {problems}
+
+    <script>
+      var answerSpan = document.getElementById('answer');
+      var answerMathField = MQ.MathField(answerSpan, {
+        handlers: {
+          edit: function() {
+            var enteredMath = answerMathField.latex(); // Get entered math in LaTeX format
+            console.log(enteredMath);
+            checkanswer(enteredMath);
+          }
+        }
+      });
+    </script>
+
+    <script>
+      for (var i = 1; i <= {n}; i++) {
+          var problemSpan = document.getElementById('problem${i}');
+          MQ.StaticMath(problemSpan);
+       }
+    </script>
+
+</body>
+</html>
