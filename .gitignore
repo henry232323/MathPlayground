@@ -102,3 +102,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+/public/mathquill*
+/public/font
+/.idea
