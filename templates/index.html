@@ -4,10 +4,18 @@
     <meta charset="UTF-8">
     <title>Home</title>
 
+    <script src="cookies.js"></script>
     <script>
         function clicked() {
             var elem = document.getElementById("ipt");
             window.location.href = `/problem?types=${elem.value}`;
+        }
+
+        var session = getUrlParam("sessionID", null);
+        if (session == null) {
+            window.location.href = `/?sessionID=${getCookie("sessionID")}`;
+        } else {
+            setCookie("sessionID", session, 31);
         }
     </script>
 </head>
@@ -21,6 +29,21 @@
     Enter the problem types you want in order, for example <i>quadratic,quadratic</i>
     <input value="" id="ipt"/>
     <button onclick="clicked()">Go</button>
+
+    <h4>Login:</h4>
+    <form action="/login">
+        Email: <input name="email" type="email" value=""/>
+        Password: <input name="password" type="password" value="">
+        <input type="submit" value="Submit">
+    </form>
+
+    <br/>
+    <h4>Signup:</h4>
+    <form action="/newaccount">
+        Email: <input name="email" type="email" value=""/>
+        Password: <input name="password" type="password" value="">
+        <input type="submit" value="Submit">
+    </form>
 
 </body>
 </html>
