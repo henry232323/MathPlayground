@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+
+    <script>
+        function clicked() {
+            var elem = document.getElementById("ipt");
+            window.location.href = `/problem?types=${elem.value}`;
+        }
+    </script>
+</head>
+<body>
+
+    Problem types:
+    <ul>
+        {list}
+    </ul>
+
+    Enter the problem types you want in order, for example <i>quadratic,quadratic</i>
+    <input value="" id="ipt"/>
+    <button onclick="clicked()">Go</button>
+
+</body>
+</html>

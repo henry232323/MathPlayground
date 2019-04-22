@@ -4,35 +4,63 @@
     <meta charset="UTF-8">
     <title>Problem {title}</title>
 
-    <link rel="stylesheet" href="/mathquill.css"/>
+    <link rel="stylesheet" href="mathquill.css"/>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
-    <script src="/mathquill.js"></script>
+    <script src="mathquill.js"></script>
     <script>
     var MQ = MathQuill.getInterface(2);
     </script>
 
+    <script src="cookies.js"></script>
+
+    <script>
+
+        const sessionID = "{sessionID}";
+
+        function submitTeX () {
+            var results = {};
+            for (let i = 1; i <= {n}; i++) {
+                console.log(MQ.MathField(document.getElementById(`answer${i}`)).latex());
+                results[`problem${i}`] = MQ.MathField(document.getElementById(`answer${i}`)).latex();
+            }
+
+            window.location.href = `/problem?t=submit&sessionID={sessionID}&${encodeQueryData(results)}`;
+        }
+
+        var session = getUrlParam("sessionID", null);
+        if (session == null) {
+            window.location.href = `/problem?sessionID=${getCookie("sessionID")}`;
+        } else {
+            setCookie("sessionID", session, 31);
+        }
+
+    </script>
 
 </head>
 <body>
-
     {problems}
 
+    <button onclick="submitTeX()" >Submit</button>
+
     <script>
-      var answerSpan = document.getElementById('answer');
-      var answerMathField = MQ.MathField(answerSpan, {
-        handlers: {
-          edit: function() {
-            var enteredMath = answerMathField.latex(); // Get entered math in LaTeX format
-            console.log(enteredMath);
-            checkanswer(enteredMath);
-          }
-        }
-      });
+      for (let i = 1; i <= {n}; i++) {
+          var answerSpan = document.getElementById(`answer${i}`);
+          var answerMathField = MQ.MathField(answerSpan, {
+            handlers: {
+              edit: function() {
+                var enteredMath = answerMathField.latex(); // Get entered math in LaTeX format
+                //console.log(enteredMath);
+                //checkanswer(enteredMath);
+              }
+            }
+          });
+      }
     </script>
 
     <script>
       for (var i = 1; i <= {n}; i++) {
-          var problemSpan = document.getElementById('problem${i}');
+          var problemSpan = document.getElementById(`problem${i}`);
+          //console.log(problemSpan);
           MQ.StaticMath(problemSpan);
        }
     </script>
