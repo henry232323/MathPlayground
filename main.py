@@ -1,6 +1,9 @@
 import asyncio
 import time
+import re
+import json
 from hashlib import md5
+from passlib.hash import sha256_crypt
 from random import randint
 
 from aiohttp import web
@@ -25,6 +28,8 @@ class Page(web.Application):
         self.add_routes([
             web.get('/', self.get_home),
             web.get('/problem', self.get_problem),
+            web.get('/login', self.get_login),
+            web.get('/newaccount', self.get_signup),
             web.get('/{filename}', self.get_quill),
             web.get('/{filename}/{filename2}', self.get_quill),
         ])
@@ -35,6 +40,12 @@ class Page(web.Application):
         with open("templates/index.html", "r") as rf:
             self.home_page = rf.read()
 
+        with open("templates/wipe_cookies.html", "r") as rf:
+            self.WIPE_COOKIES = rf.read()
+
+        with open("logins.json", "r") as js:
+            self.auth = json.load(js)
+
         self.nsp = NumericStringParser()
         self.sessions = {}
 
@@ -44,9 +55,45 @@ class Page(web.Application):
         site = web.TCPSite(runner, '0.0.0.0', 5556)
         await site.start()
 
+    async def get_login(self, request: web.Request):
+        if 'password' not in request.query or 'email' not in request.query:
+            raise web.HTTPNetworkAuthenticationRequired()
+
+        email = request.query['email']
+        password = request.query['password']
+
+        verified = sha256_crypt.verify(password, sha256_crypt.encrypt(self.auth.get(email, "")))
+        if not verified:
+            raise web.HTTPFound(self.URL_BASE)
+
+        sid = self.create_session(email)
+        self.sessions[sid] = email
+        raise web.HTTPFound(self.URL_BASE + f"/?sessionID={sid}")
+
+    async def get_signup(self, request: web.Request):
+        if 'password' not in request.query or 'email' not in request.query:
+            raise web.HTTPNetworkAuthenticationRequired()
+
+        email = request.query['email']
+        password = request.query['password']
+        if email in self.auth:
+            raise web.HTTPFound(self.URL_BASE)
+
+        phash = sha256_crypt.encrypt(password)
+        self.auth[email] = phash
+
+        sid = self.create_session(email)
+        self.sessions[sid] = email
+        raise web.HTTPFound(self.URL_BASE + f"/?sessionID={sid}")
+
     async def get_home(self, request: web.Request):
         listing = "    \n".join("<li>{}</li>".format(x) for x in self.types)
         text = self.home_page.replace("{list}", listing)
+
+        if 'sessionID' in request.query and request.query['sessionID'] and request.query['sessionID'] not in self.sessions:
+            resp = web.Response(body=self.WIPE_COOKIES)
+            resp.headers['content-type'] = 'text/html'
+            return resp
 
         resp = web.Response(body=text)
         resp.headers['content-type'] = 'text/html'
@@ -117,8 +164,12 @@ class Page(web.Application):
             raise web.HTTPFound(self.URL_BASE + f"/problem?sessionID={items['sessionID']}")
 
         elif "t" in request.query and request.query['t'] == 'submit':
-            if "sessionID" not in request.query or request.query['sessionID'] not in self.sessions:
+            if "sessionID" not in request.query:
                 raise web.HTTPFound(self.URL_BASE)
+            if request.query['sessionID'] not in self.sessions:
+                resp = web.Response(body=self.WIPE_COOKIES)
+                resp.headers['content-type'] = 'text/html'
+                return resp
 
             session_data = self.sessions[request.query['sessionID']]
             verified = {}
@@ -200,10 +251,11 @@ class Page(web.Application):
         else:
             raise web.HTTPBadRequest(reason="Failed to provide a problem type")
 
-    def create_session(self):
+    def create_session(self, email):
         hash = md5()
         hash.update(str(time.ctime()).encode())
         hash.update(str(randint(1, 50)).encode())
+        hash.update(email.encode())
         return hash.hexdigest()
 
 
