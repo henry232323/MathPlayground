@@ -106,3 +106,4 @@ venv.bak/
 public/mathquill*
 public/font/
 .idea/
+logins.json

@@ -3,17 +3,18 @@ import time
 import re
 import json
 from hashlib import md5
-from passlib.hash import sha256_crypt
 from random import randint
 
 from aiohttp import web
-
 from sympy.parsing.latex import parse_latex
 import sympy
+from passlib.hash import sha256_crypt
 
 from problems import *
 from util import NumericStringParser
 
+EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
+URL_BASE = "http://localhost:5556"
 
 class Page(web.Application):
     URL_BASE = "http://localhost:5556"
@@ -62,7 +63,8 @@ class Page(web.Application):
         email = request.query['email']
         password = request.query['password']
 
-        verified = sha256_crypt.verify(password, sha256_crypt.encrypt(self.auth.get(email, "")))
+        verified = sha256_crypt.verify(password, sha256_crypt.hash(self.auth.get(email, "")))
+        print(verified)
         if not verified:
             raise web.HTTPFound(self.URL_BASE)
 
@@ -75,12 +77,17 @@ class Page(web.Application):
             raise web.HTTPNetworkAuthenticationRequired()
 
         email = request.query['email']
+        if not EMAIL_REGEX.fullmatch(email):
+            raise web.HTTPFound(URL_BASE)
         password = request.query['password']
         if email in self.auth:
             raise web.HTTPFound(self.URL_BASE)
 
-        phash = sha256_crypt.encrypt(password)
+        phash = sha256_crypt.hash(password)
         self.auth[email] = phash
+
+        with open("logins.json", "w") as js:
+            json.dump(self.auth, js)
 
         sid = self.create_session(email)
         self.sessions[sid] = email
@@ -90,7 +97,8 @@ class Page(web.Application):
         listing = "    \n".join("<li>{}</li>".format(x) for x in self.types)
         text = self.home_page.replace("{list}", listing)
 
-        if 'sessionID' in request.query and request.query['sessionID'] and request.query['sessionID'] not in self.sessions:
+        if 'sessionID' in request.query and request.query['sessionID'] and request.query[
+            'sessionID'] not in self.sessions:
             resp = web.Response(body=self.WIPE_COOKIES)
             resp.headers['content-type'] = 'text/html'
             return resp
@@ -148,7 +156,7 @@ class Page(web.Application):
             for i, itype in enumerate(types):
                 probData = self.types[itype](**request.query)
                 problemsData.append(probData)
-                #print("\n".join(probData[0]), probData[0])
+                # print("\n".join(probData[0]), probData[0])
                 problems += "\n" + temp.format(n=i + 1, eq="</li><li>".join(probData[0]), quest=probData[3])
 
             items = {
